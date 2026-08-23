@@ -25,71 +25,6 @@ ground = box(
     texture=textures.granite
     )
 
-# envelope = sphere(
-#     pos=vec(0, 5, 0),
-#     size=vec(4, 4.5, 4),
-#     color=color.red,
-# )
-
-# outershape = [
-#     [0.40, -0.40],
-#     [0.40,  0.40],
-#     [-0.40, 0.40],
-#     [-0.40,-0.40],
-#     [0.40,-0.40]
-# ]
-
-# innershape = [
-#     [0.30,-0.30],
-#     [0.30, 0.30],
-#     [-0.30,0.30],
-#     [-0.30,-0.30],
-#     [0.30,-0.30]
-# ]
-
-# walls = extrusion(
-#     shape=[outershape, innershape],
-#     path=[
-#         vec(0, 0.0, 0),
-#         vec(0, .5, 0)
-#     ],
-#     color=vector(.55, .27, .07)
-# )
-
-# bottom = extrusion(
-#     shape=outershape,
-#     path=[
-#         vec(0, 0.0, 0),
-#         vec(0, 0.1, 0)
-#     ],
-#     color=vector(.55, .27, .07)
-# )
-
-# basket = compound([walls, bottom])
-
-# ropes = []
-
-# for sx in (-1, 1):
-#     for sz in (-1, 1):
-
-#         start = vec(sx * 0.30, 0.50, sz * 0.30)
-#         end   = vec(sx * 0.75, 2.80, sz * 0.75)
-
-#         ropes.append(
-#             cylinder(
-#                 pos=start,
-#                 axis=end - start,
-#                 radius=0.015,
-#                 color=color.white
-#             )
-#         )
-
-# balloon = compound([
-#     envelope,
-#     basket,
-#     *ropes,
-# ])
-
 balloon = sphere(
     pos=vec(3, 0, 3), 
     size=vec(2, 2, 2),
@@ -111,7 +46,7 @@ g_pos = graph(
     xtitle="Time (s)",
     ytitle="Position",
     width=600,
-    height=650,
+    height=250,
     xmin=0,
     xmax=15,
     ymin=-10,
