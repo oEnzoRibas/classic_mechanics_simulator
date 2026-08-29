@@ -1,1 +1,5 @@
 venv/
+/src/relative_movement/balloon/apps/manim/output/Tex
+/src/relative_movement/balloon/apps/manim/output/texts
+**__pycache__
+/src/relative_movement/balloon/apps/manim/output/videos/manim-app/1080p60/partial_movie_files
