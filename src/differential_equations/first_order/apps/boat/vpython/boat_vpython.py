@@ -19,6 +19,7 @@ INITIAL_VELOCITY = 20.0
 
 DT = 0.01
 FINAL_TIME = 20.0
+MASS =  1000
 
 
 # ============================================================
@@ -33,11 +34,11 @@ def boat_equation(t, y):
     position = y[0]
     velocity = y[1]
 
-    k = 70
+    k = -0.7
 
     return (
         velocity,
-        k * velocity,
+        k * velocity
     )
 
 
@@ -74,19 +75,20 @@ class VPythonRenderer:
             title="<h2>Boat — Linear Drag</h2>",
         )
 
-        self.scene.center = vector(0, 0, 0)
-        self.scene.range = 25
+        self.scene.center = vector(10, 30, -20)
+        self.scene.range = 20
+        self.scene.camera.axis = vector(0, -50, -30)
 
         self.water = box(
-            pos=vector(0, -0.7, 0),
-            size=vector(100, 0.2, 20),
+            pos=vector(0, 0, 0),
+            size=vector(100, .6, 20),
             color=color.blue,
             opacity=0.5,
         )
 
         self.boat = box(
             pos=vector(INITIAL_POSITION, 0, 0),
-            size=vector(4, 1, 2),
+            size=vector(8, 4, 2),
             color=color.red,
         )
 
