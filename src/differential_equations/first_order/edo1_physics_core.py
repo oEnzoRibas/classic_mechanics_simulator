@@ -31,6 +31,10 @@ class DifferentialEquation:
             
 
 class ODESolver:
+    """
+    Base class for numerical ODE solvers.
+    """
+
     def __init__(
         self,
         ode: DifferentialEquation,
@@ -42,7 +46,7 @@ class ODESolver:
         self.ode = ode
         self.step_size = step_size
 
-    def step(self, state: ODEState) -> ODEState:
+    def step(self, state: ODEState, step_size : float) -> ODEState:
         """
         Perform one numerical integration step.
 
@@ -57,8 +61,29 @@ class ODESolver:
         until final_time.
         """
 
-        raise NotImplementedError
-    pass
+        if final_time < self.ode.initial_time:
+            raise ValueError(
+                "Final time must be greater than or equal "
+                "to the initial time."
+            )
+
+        state = ODEState(
+            t=self.ode.initial_time,
+            y=self.ode.initial_state,
+        )
+
+        states = [state]
+
+        while state.t < final_time:
+            remaining_time = final_time - state.t
+
+            # Avoid overshooting the requested final time.
+            step_size = min(self.step_size, remaining_time)
+
+            state = self.step(state, step_size)
+            states.append(state)
+
+        return states
 
 class EulerSolver(ODESolver):
     """Numerical solver based on the explicit Euler method."""
@@ -66,8 +91,60 @@ class EulerSolver(ODESolver):
     pass
 
 class RK4Solver(ODESolver):
-    """Numerical solver based on the 4th-order Runge-Kutta method."""
-    pass
+    """Numerical solver based on the classical fourth-order Runge-Kutta method."""
+
+    def step(
+        self,
+        state: ODEState,
+        step_size: float,
+    ) -> ODEState:
+
+        t = state.t
+        y = state.y
+
+        k1 = self.ode.evaluate(t, y)
+
+        y_k2 = tuple(
+            yi + (step_size / 2.0) * k1i
+            for yi, k1i in zip(y, k1)
+        )
+
+        k2 = self.ode.evaluate(
+            t + step_size / 2.0,
+            y_k2,
+        )
+
+        y_k3 = tuple(
+            yi + (step_size / 2.0) * k2i
+            for yi, k2i in zip(y, k2)
+        )
+
+        k3 = self.ode.evaluate(
+            t + step_size / 2.0,
+            y_k3,
+        )
+
+        y_k4 = tuple(
+            yi + step_size * k3i
+            for yi, k3i in zip(y, k3)
+        )
+
+        k4 = self.ode.evaluate(
+            t + step_size,
+            y_k4,
+        )
+
+        next_y = tuple(
+            yi + (step_size / 6.0)
+            * (k1i + 2.0 * k2i + 2.0 * k3i + k4i)
+            for yi, k1i, k2i, k3i, k4i
+            in zip(y, k1, k2, k3, k4)
+        )
+
+        return ODEState(
+            t=t + step_size,
+            y=next_y,
+        )
 
 
 class SimulationEngine:
