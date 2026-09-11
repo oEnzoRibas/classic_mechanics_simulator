@@ -1,0 +1,15 @@
+README.md
+pyproject.toml
+src/classical_mechanics_simulator.egg-info/PKG-INFO
+src/classical_mechanics_simulator.egg-info/SOURCES.txt
+src/classical_mechanics_simulator.egg-info/dependency_links.txt
+src/classical_mechanics_simulator.egg-info/requires.txt
+src/classical_mechanics_simulator.egg-info/top_level.txt
+src/differential_equations/first_order/__init__.py
+src/differential_equations/first_order/edo1_physics_core.py
+src/differential_equations/first_order/apps/boat/vpython/boat_vpython.py
+src/lancamento/ericvicentt_Lançamentodeprojeteis.py
+src/relative_movement/balloon/physics_core.py
+src/relative_movement/balloon/apps/manim/manim-app.py
+src/relative_movement/balloon/apps/vpython/vpython.app.py
+src/relative_movement/balloon/deprecated/deprecated-balloon_cellphone_drop.py
