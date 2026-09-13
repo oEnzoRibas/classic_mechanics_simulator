@@ -34,7 +34,7 @@ def boat_equation(t, y):
     position = y[0]
     velocity = y[1]
 
-    k = -0.7
+    k = -70/MASS
 
     return (
         velocity,
