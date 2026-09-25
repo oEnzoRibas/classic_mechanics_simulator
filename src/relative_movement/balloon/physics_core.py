@@ -69,17 +69,14 @@ class SimulationEngine:
         Returns:
             dict: A payload containing absolute positions, relative positions, and energies.
         """
-        # 1. Compute absolute states (ground reference)
         abs_states = {name: obj.get_state_at(t) for name, obj in self.objects.items()}
         
-        # 2. Determine the origin of the active reference frame
         if active_ref == "ground":
             ref_y, ref_v = 0.0, 0.0
         else:
             ref_state = abs_states[active_ref]
             ref_y, ref_v = ref_state.y, ref_state.v
             
-        # 3. Build the payload snapshot
         snapshot = {}
         for name, obj in self.objects.items():
             state = abs_states[name]

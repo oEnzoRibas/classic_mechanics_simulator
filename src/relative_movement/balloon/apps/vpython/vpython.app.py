@@ -8,6 +8,7 @@ from typing import Dict, List, Optional
 GRAPH_W = 650
 GRAPH_H = 200
 GRAPH_XMAX = 2.8
+GRAPH_SCALE = 1.5
 
 # SCENE
 VELOCITY_ARROW_SCALE = 0.9
@@ -23,7 +24,7 @@ class VPythonRenderer:
         self.engine = engine
         self.dt = 0.01
         self.t = 0.0
-        self.is_running = True
+        self.is_running = False
         self.active_ref = "ground"
         self.refs = ["ground", "cellphone", "balloon"]
         self.active_graph_view = "pos"
@@ -35,6 +36,9 @@ class VPythonRenderer:
         self._setup_scene()
         self._setup_graphs()
         self._setup_ui_controls()
+
+        initial_snapshot = self.engine.get_snapshot(0.0, self.active_ref)
+        self._update_visuals(initial_snapshot)
         
     def _setup_scene(self) -> None:
         """Initializes the VPython 3D canvas and meshes."""
@@ -59,6 +63,7 @@ class VPythonRenderer:
                 radius=1.2, 
                 color=color.cyan
                 ),
+                
             "cellphone": box(
                 pos=vec(2, 10, 3), 
                 size=vec(2, 2, 2), 
@@ -101,13 +106,17 @@ class VPythonRenderer:
         show_cell = self.active_graph_view in ("all", "cell_eng")
         show_balloon = self.active_graph_view in ("all", "balloon_eng")
 
+        
+        graph_width = GRAPH_W if self.active_graph_view == "all" else GRAPH_SCALE * GRAPH_W
+        graph_height = GRAPH_H if self.active_graph_view == "all" else GRAPH_SCALE * GRAPH_H
+
         if show_pos:
             
             g_pos = graph(
                 align="right",
                 title="<b>Relative Position (m)</b>",
-                width=GRAPH_W,
-                height=GRAPH_H,
+                width=graph_width,
+                height=graph_height,
                 xmax=GRAPH_XMAX,
             )
             
@@ -128,8 +137,8 @@ class VPythonRenderer:
             g_c_eng = graph(
                 align="right",
                 title="<b>Cellphone Energy (J)</b>",
-                width=GRAPH_W,
-                height=GRAPH_H,
+                width=graph_width,
+                height=graph_height,
                 xmax=GRAPH_XMAX,
             )
 
@@ -151,8 +160,8 @@ class VPythonRenderer:
             g_b_eng = graph(
                 align="right",
                 title="<b>Balloon Energy (J)</b>",
-                width=GRAPH_W,
-                height=GRAPH_H,
+                width=graph_width,
+                height=graph_height,
                 xmax=GRAPH_XMAX,
             )
             self.graphs["balloon_eng"] = g_b_eng
@@ -172,7 +181,7 @@ class VPythonRenderer:
     def _setup_ui_controls(self) -> None:
         """Injects UI buttons and drop-down selectors into the VPython DOM."""
         self.btn_pause = button(
-            text="⏸ PAUSE", bind=self.toggle_pause, background=color.orange
+            text="▶ PLAY", bind=self.toggle_pause, background=color.orange
         )
         self.scene.append_to_caption("  ")
         button(text="🔄 RESTART", bind=self.restart_sim, background=color.blue)
@@ -224,6 +233,8 @@ class VPythonRenderer:
 
     def set_graph_view(self, view_mode: str) -> None:
         """Re-initializes active graph containers and replots history."""
+        
+        
         if self.active_graph_view == view_mode:
             return
 
@@ -304,10 +315,6 @@ class VPythonRenderer:
             0
         )
 
-
-        
-
-
     def _plot_graphs(self, current_time: float, snapshot: dict) -> None:
         """Appends points only to instantiated active curves."""
         cell = snapshot["cellphone"]
@@ -350,15 +357,26 @@ class VPythonRenderer:
 
 
 if __name__ == "__main__":
-    # 1. Instantiate the Domain (Physics)
-    cellphone_model = PointMass(name="cellphone", mass=1.0, initial_y=10.0, initial_v=10.0, accel=-GRAVITY)
-    balloon_model = PointMass(name="balloon", mass=1.0, initial_y=10.0, initial_v=10.0, accel=0.0)
+    cellphone_model = PointMass(
+        name="cellphone", 
+        mass=1.0, 
+        initial_y=10.0, 
+        initial_v=10.0, 
+        accel=-GRAVITY
+        )
+    
+    balloon_model = PointMass(
+        name="balloon", 
+        mass=1.0, 
+        initial_y=10.0, 
+        initial_v=10.0, 
+        accel=0.0
+        )
     
     engine = SimulationEngine(objects={
         "cellphone": cellphone_model,
         "balloon": balloon_model
     })
     
-    # 2. Inject Domain into Presentation Layer and run
     app = VPythonRenderer(engine)
     app.run()
