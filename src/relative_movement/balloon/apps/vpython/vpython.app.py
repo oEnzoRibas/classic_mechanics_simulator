@@ -143,12 +143,6 @@ class VPythonRenderer:
             self.all_curves.extend(
                 [self.curves["b_K"], self.curves["b_U"], self.curves["b_E"]]
             )
-        
-        self.graphs = {
-            "pos":          graph(align="right", title="<b>Relative Position (m)</b>", width=GRAPH_W, height=GRAPH_H, xmax=GRAPH_XMAX), 
-            "cell_eng":     graph(align="right", title="<b>Cellphone Energy (J)</b>", width=GRAPH_W, height=GRAPH_H, xmax=GRAPH_XMAX), 
-            "balloon_eng":  graph(align="right", title="<b>Balloon Energy (J)</b>", width=GRAPH_W, height=GRAPH_H, xmax=GRAPH_XMAX)
-        }
 
     def _setup_ui_controls(self) -> None:
         """Injects UI buttons and drop-down selectors into the VPython DOM."""
