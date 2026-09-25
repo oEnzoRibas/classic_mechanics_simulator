@@ -15,12 +15,15 @@ class ODEState:
 class DifferentialEquation:
     """
     """
-    def __init__(
+    def __init__(     
             self, 
-            derivative: Callable[[float, Tuple[float, ...]], Tuple[float, ...]],
+            derivative: Callable[ #callable function
+                [float, Tuple[float, ...]], #inputs
+                Tuple[float, ...] #outputs
+                ],
             initial_time: float,
             initial_state: Tuple[float, ...]
-        ):
+    ):
         self.derivative = derivative
         self.initial_time = initial_time
         self.initial_state = initial_state
@@ -88,7 +91,27 @@ class ODESolver:
 class EulerSolver(ODESolver):
     """Numerical solver based on the explicit Euler method."""
 
-    pass
+    def step(
+            self,
+            state: ODEState,
+            step_size: float,
+    )-> ODEState:
+
+        t = state.t
+        y = state.y
+
+        dydt = self.ode.evaluate(t, y)
+
+        next_y = tuple(
+            yi + step_size * dyi
+            for yi, dyi in zip(y, dydt)
+        )
+
+        return ODEState(
+            t=t + step_size,
+            y=next_y,
+        )
+
 
 class RK4Solver(ODESolver):
     """Numerical solver based on the classical fourth-order Runge-Kutta method."""
