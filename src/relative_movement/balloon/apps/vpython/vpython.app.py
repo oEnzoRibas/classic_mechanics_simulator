@@ -145,8 +145,8 @@ class VPythonRenderer:
             )
         
         self.graphs = {
-            "pos":          graph(align="right", title="<b>Relative Position (m)</b>", width=GRAPH_W, height=GRAPH_H, xmax=GRAPH_XMAX),
-            "cell_eng":     graph(align="right", title="<b>Cellphone Energy (J)</b>", width=GRAPH_W, height=GRAPH_H, xmax=GRAPH_XMAX),
+            "pos":          graph(align="right", title="<b>Relative Position (m)</b>", width=GRAPH_W, height=GRAPH_H, xmax=GRAPH_XMAX), 
+            "cell_eng":     graph(align="right", title="<b>Cellphone Energy (J)</b>", width=GRAPH_W, height=GRAPH_H, xmax=GRAPH_XMAX), 
             "balloon_eng":  graph(align="right", title="<b>Balloon Energy (J)</b>", width=GRAPH_W, height=GRAPH_H, xmax=GRAPH_XMAX)
         }
 
