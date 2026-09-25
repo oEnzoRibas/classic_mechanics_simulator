@@ -3,9 +3,16 @@ from relative_movement.balloon.physics_core import PointMass, SimulationEngine, 
 from typing import Dict, List, Optional
 
 # --- UI Constants ---
+
+# GRAPH
 GRAPH_W = 650
 GRAPH_H = 200
 GRAPH_XMAX = 2.8
+
+# SCENE
+VELOCITY_ARROW_SCALE = 0.9
+CANVAS_H = 600
+CANVAS_W = 520
 
 class VPythonRenderer:
     """
@@ -33,12 +40,12 @@ class VPythonRenderer:
         """Initializes the VPython 3D canvas and meshes."""
         self.scene = canvas(
             align="left",
-            width=520, height=600,
-            background=vector(0.15, 0.15, 0.15),
+            width=CANVAS_W, height=CANVAS_H,
+            background=vector(0.0, 0.08, 0.2),
             title="<h2>Kinematics & Reference Frames</h2>"
         )
-        self.scene.center = vec(0, 20, 30)
-        self.scene.range = 10
+        self.scene.center = vec(0, 10, 30)
+        self.scene.range = 25
         
         # 3D Objects mapping
         self.meshes = {
@@ -57,6 +64,24 @@ class VPythonRenderer:
                 size=vec(2, 2, 2), 
                 color=color.red
                 )
+        }
+
+        self.velocity_arrows = {
+            "cellphone": arrow(
+                pos=self.meshes["cellphone"].pos,
+                round=1,
+                axis=vec(0, 0, 0),
+                color=color.green,
+                shaftwidth=0.95
+            ),
+
+            "balloon": arrow(
+                pos=self.meshes["balloon"].pos,
+                round=1,
+                axis=vec(0, 0, 0),
+                color=color.yellow,
+                shaftwidth=0.95
+            )
         }
         
     def _setup_graphs(self) -> None:
@@ -261,8 +286,27 @@ class VPythonRenderer:
 
     def _update_visuals(self, snapshot: dict) -> None:
         """Updates 3D mesh positions."""
+        # cellphone
         self.meshes["cellphone"].pos.y = snapshot["cellphone"]["abs_y"]
+        self.velocity_arrows["cellphone"].pos = self.meshes["cellphone"].pos
+        self.velocity_arrows["cellphone"].axis = vec(
+            0,
+            snapshot["cellphone"]["rel_v"] * VELOCITY_ARROW_SCALE,
+            0
+        )
+
+        #balloon
         self.meshes["balloon"].pos.y = snapshot["balloon"]["abs_y"]
+        self.velocity_arrows["balloon"].pos = self.meshes["balloon"].pos
+        self.velocity_arrows["balloon"].axis = vec(
+            0,
+            snapshot["balloon"]["rel_v"] * VELOCITY_ARROW_SCALE,
+            0
+        )
+
+
+        
+
 
     def _plot_graphs(self, current_time: float, snapshot: dict) -> None:
         """Appends points only to instantiated active curves."""
