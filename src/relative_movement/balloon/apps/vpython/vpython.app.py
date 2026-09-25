@@ -1,10 +1,11 @@
-# vpython_app.py
 from vpython import *
 from relative_movement.balloon.physics_core import PointMass, SimulationEngine, GRAVITY
+from typing import Dict, List, Optional
 
 # --- UI Constants ---
 GRAPH_W = 650
 GRAPH_H = 200
+GRAPH_XMAX = 2.8
 
 class VPythonRenderer:
     """
@@ -18,7 +19,12 @@ class VPythonRenderer:
         self.is_running = True
         self.active_ref = "ground"
         self.refs = ["ground", "cellphone", "balloon"]
-        
+        self.active_graph_view = "pos"
+
+        self.graphs: Dict[str, graph] = {}
+        self.curves: Dict[str, gcurve] = {}
+        self.all_curves: List[gcurve] = []
+
         self._setup_scene()
         self._setup_graphs()
         self._setup_ui_controls()
@@ -36,50 +42,176 @@ class VPythonRenderer:
         
         # 3D Objects mapping
         self.meshes = {
-            "ground": box(pos=vec(0, 0, 0), size=vec(30, 0.2, 30), color=color.gray(0.5)),
-            "balloon": sphere(pos=vec(-2, 10, 3), radius=1.2, color=color.cyan),
-            "cellphone": box(pos=vec(2, 10, 3), size=vec(2, 2, 2), color=color.red)
+            "ground": box(
+                pos=vec(0, 0, 0), 
+                size=vec(30, 0.2, 30), 
+                color=color.gray(0.5)
+                ),
+            "balloon": sphere(
+                pos=vec(-2, 10, 3), 
+                radius=1.2, 
+                color=color.cyan
+                ),
+            "cellphone": box(
+                pos=vec(2, 10, 3), 
+                size=vec(2, 2, 2), 
+                color=color.red
+                )
         }
         
     def _setup_graphs(self) -> None:
-        """Builds the graphical plots for relative positions and energies."""
-        pos_graph = graph(align="right", title="<b>Relative Position (m)</b>", width=GRAPH_W, height=GRAPH_H, xmax=2.8)
-        self.curve_c_pos = gcurve(graph=pos_graph, color=color.red, label="Cellphone")
-        self.curve_b_pos = gcurve(graph=pos_graph, color=color.cyan, label="Balloon")
+        """
+        Lifecycle management for graph widgets.
+        Destroys existing canvases and instantiates only active graphs.
+        """
 
-        c_eng_graph = graph(align="right", title="<b>Cellphone Energy (J)</b>", width=GRAPH_W, height=GRAPH_H, xmax=2.8)
-        self.curve_c_K = gcurve(graph=c_eng_graph, color=color.blue, label="Kinetic (K)")
-        self.curve_c_U = gcurve(graph=c_eng_graph, color=color.orange, label="Potential (U)")
-        self.curve_c_E = gcurve(graph=c_eng_graph, color=color.red, label="Mechanical (E)")
+        for g in self.graphs.values():
+            g.delete()
 
-        b_eng_graph = graph(align="right", title="<b>Balloon Energy (J)</b>", width=GRAPH_W, height=GRAPH_H, xmax=2.8)
-        self.curve_b_K = gcurve(graph=b_eng_graph, color=color.blue, label="Kinetic (K)")
-        self.curve_b_U = gcurve(graph=b_eng_graph, color=color.orange, label="Potential (U)")
-        self.curve_b_E = gcurve(graph=b_eng_graph, color=color.cyan, label="Mechanical (E)")
+        self.graphs.clear()
+        self.curves.clear()
+        self.all_curves.clear()
         
-        # Store curves for easy clearing
-        self.all_curves = [
-            self.curve_c_pos, self.curve_b_pos, 
-            self.curve_c_K, self.curve_c_U, self.curve_c_E,
-            self.curve_b_K, self.curve_b_U, self.curve_b_E
-        ]
+        show_pos = self.active_graph_view in ("all", "pos")
+        show_cell = self.active_graph_view in ("all", "cell_eng")
+        show_balloon = self.active_graph_view in ("all", "balloon_eng")
+
+        if show_pos:
+            
+            g_pos = graph(
+                align="right",
+                title="<b>Relative Position (m)</b>",
+                width=GRAPH_W,
+                height=GRAPH_H,
+                xmax=GRAPH_XMAX,
+            )
+            
+            self.graphs["pos"] = g_pos
+            
+            self.curves["c_pos"] = gcurve(
+                graph=g_pos, color=color.red, label="Cellphone"
+            )
+            
+            self.curves["b_pos"] = gcurve(
+                graph=g_pos, color=color.cyan, label="Balloon"
+            )
+            
+            self.all_curves.extend([self.curves["c_pos"], self.curves["b_pos"]])
+
+        if show_cell:
+            
+            g_c_eng = graph(
+                align="right",
+                title="<b>Cellphone Energy (J)</b>",
+                width=GRAPH_W,
+                height=GRAPH_H,
+                xmax=GRAPH_XMAX,
+            )
+
+            self.graphs["cell_eng"] = g_c_eng
+            self.curves["c_K"] = gcurve(
+                graph=g_c_eng, color=color.blue, label="Kinetic (K)"
+            )
+            self.curves["c_U"] = gcurve(
+                graph=g_c_eng, color=color.orange, label="Potential (U)"
+            )
+            self.curves["c_E"] = gcurve(
+                graph=g_c_eng, color=color.red, label="Mechanical (E)"
+            )
+            self.all_curves.extend(
+                [self.curves["c_K"], self.curves["c_U"], self.curves["c_E"]]
+            )
+
+        if show_balloon:
+            g_b_eng = graph(
+                align="right",
+                title="<b>Balloon Energy (J)</b>",
+                width=GRAPH_W,
+                height=GRAPH_H,
+                xmax=GRAPH_XMAX,
+            )
+            self.graphs["balloon_eng"] = g_b_eng
+            self.curves["b_K"] = gcurve(
+                graph=g_b_eng, color=color.blue, label="Kinetic (K)"
+            )
+            self.curves["b_U"] = gcurve(
+                graph=g_b_eng, color=color.orange, label="Potential (U)"
+            )
+            self.curves["b_E"] = gcurve(
+                graph=g_b_eng, color=color.cyan, label="Mechanical (E)"
+            )
+            self.all_curves.extend(
+                [self.curves["b_K"], self.curves["b_U"], self.curves["b_E"]]
+            )
+        
+        self.graphs = {
+            "pos":          graph(align="right", title="<b>Relative Position (m)</b>", width=GRAPH_W, height=GRAPH_H, xmax=GRAPH_XMAX),
+            "cell_eng":     graph(align="right", title="<b>Cellphone Energy (J)</b>", width=GRAPH_W, height=GRAPH_H, xmax=GRAPH_XMAX),
+            "balloon_eng":  graph(align="right", title="<b>Balloon Energy (J)</b>", width=GRAPH_W, height=GRAPH_H, xmax=GRAPH_XMAX)
+        }
 
     def _setup_ui_controls(self) -> None:
-        """Injects UI buttons into the VPython DOM and binds event handlers."""
-        self.btn_pause = button(text="⏸ PAUSE", bind=self.toggle_pause, background=color.orange)
+        """Injects UI buttons and drop-down selectors into the VPython DOM."""
+        self.btn_pause = button(
+            text="⏸ PAUSE", bind=self.toggle_pause, background=color.orange
+        )
         self.scene.append_to_caption("  ")
         button(text="🔄 RESTART", bind=self.restart_sim, background=color.blue)
 
         self.scene.append_to_caption("<b>  Active Reference:</b> &nbsp;&nbsp;")
-        self.btn_ground = button(text="◉ GROUND", bind=lambda b: self.change_ref("ground"), background=color.green)
+        self.btn_ground = button(
+            text="◉ GROUND",
+            bind=lambda b: self.change_ref("ground"),
+            background=color.green,
+        )
         self.scene.append_to_caption("  ")
-        self.btn_cell = button(text="○ CELLPHONE", bind=lambda b: self.change_ref("cellphone"), background=color.gray(0.5))
+        self.btn_cell = button(
+            text="○ CELLPHONE",
+            bind=lambda b: self.change_ref("cellphone"),
+            background=color.gray(0.5),
+        )
         self.scene.append_to_caption("  ")
-        self.btn_balloon = button(text="○ BALLOON", bind=lambda b: self.change_ref("balloon"), background=color.gray(0.5))
+        self.btn_balloon = button(
+            text="○ BALLOON",
+            bind=lambda b: self.change_ref("balloon"),
+            background=color.gray(0.5),
+        )
+
+        self.scene.append_to_caption("\n<b>Display Graphs:</b> &nbsp;&nbsp;")
+        self.menu_graphs = menu(
+            choices=["ALL", "Position", "Cellphone Energy", "Balloon Energy"],
+            selected="Position",
+            bind=self._on_graph_menu_change,
+        )
         self.scene.append_to_caption("\n<hr>")
 
     # --- Event Handlers ---
-    
+
+    def _on_graph_menu_change(self, m: menu) -> None:
+        """Safe handler with type narrowing for the menu widget."""
+        selected_option: Optional[str] = m.selected
+        if not selected_option:
+            return
+
+        mapping: Dict[str, str] = {
+            "ALL": "all",
+            "Position": "pos",
+            "Cellphone Energy": "cell_eng",
+            "Balloon Energy": "balloon_eng",
+        }
+
+        if selected_option in mapping:
+            self.set_graph_view(mapping[selected_option])
+
+    def set_graph_view(self, view_mode: str) -> None:
+        """Re-initializes active graph containers and replots history."""
+        if self.active_graph_view == view_mode:
+            return
+
+        self.active_graph_view = view_mode
+        self._setup_graphs()
+        self._replot_history()
+
     def toggle_pause(self, b) -> None:
         self.is_running = not self.is_running
         self.btn_pause.text = "▶ PLAY" if not self.is_running else "⏸ PAUSE"
@@ -97,52 +229,70 @@ class VPythonRenderer:
             self.toggle_pause(self.btn_pause)
 
     def change_ref(self, selected_ref: str) -> None:
-        """
-        Changes the reference frame and recomputes the historical graph data 
-        up to the current time 't'.
-        """
+        """Changes reference frame and replots historical telemetry."""
         self.active_ref = selected_ref
-        
+
         self.btn_ground.text = "◉ GROUND" if selected_ref == "ground" else "○ GROUND"
-        self.btn_cell.text = "◉ CELLPHONE" if selected_ref == "cellphone" else "○ CELLPHONE"
-        self.btn_balloon.text = "◉ BALLOON" if selected_ref == "balloon" else "○ BALLOON"
-        
-        self.btn_ground.background = color.green if selected_ref == "ground" else color.gray(0.5)
-        self.btn_cell.background = color.green if selected_ref == "cellphone" else color.gray(0.5)
-        self.btn_balloon.background = color.green if selected_ref == "balloon" else color.gray(0.5)
-        
-        # Re-plot all history for the new reference frame
+        self.btn_cell.text = (
+            "◉ CELLPHONE" if selected_ref == "cellphone" else "○ CELLPHONE"
+        )
+        self.btn_balloon.text = (
+            "◉ BALLOON" if selected_ref == "balloon" else "○ BALLOON"
+        )
+
+        self.btn_ground.background = (
+            color.green if selected_ref == "ground" else color.gray(0.5)
+        )
+        self.btn_cell.background = (
+            color.green if selected_ref == "cellphone" else color.gray(0.5)
+        )
+        self.btn_balloon.background = (
+            color.green if selected_ref == "balloon" else color.gray(0.5)
+        )
+
         for curve in self.all_curves:
             curve.data = []
-            
+
+        self._replot_history()
+
+    def _replot_history(self) -> None:
+        """Re-evaluates engine state from 0 to current t for active curves."""
         history_t = 0.0
         while history_t <= self.t:
-            snap = self.engine.get_snapshot(history_t, selected_ref)
+            snap = self.engine.get_snapshot(history_t, self.active_ref)
             self._plot_graphs(history_t, snap)
             history_t += self.dt
 
     # --- Render Loop ---
 
     def _update_visuals(self, snapshot: dict) -> None:
-        """Updates the 3D meshes based on the domain absolute position."""
+        """Updates 3D mesh positions."""
         self.meshes["cellphone"].pos.y = snapshot["cellphone"]["abs_y"]
         self.meshes["balloon"].pos.y = snapshot["balloon"]["abs_y"]
 
     def _plot_graphs(self, current_time: float, snapshot: dict) -> None:
-        """Appends new data points to the graphs based on relative snapshot data."""
+        """Appends points only to instantiated active curves."""
         cell = snapshot["cellphone"]
         balloon = snapshot["balloon"]
-        
-        self.curve_c_pos.plot(current_time, cell["rel_y"])
-        self.curve_b_pos.plot(current_time, balloon["rel_y"])
-        
-        self.curve_c_K.plot(current_time, cell["energies"].kinetic)
-        self.curve_c_U.plot(current_time, cell["energies"].potential)
-        self.curve_c_E.plot(current_time, cell["energies"].mechanical)
-        
-        self.curve_b_K.plot(current_time, balloon["energies"].kinetic)
-        self.curve_b_U.plot(current_time, balloon["energies"].potential)
-        self.curve_b_E.plot(current_time, balloon["energies"].mechanical)
+
+        if "c_pos" in self.curves:
+            self.curves["c_pos"].plot(current_time, cell["rel_y"])
+        if "b_pos" in self.curves:
+            self.curves["b_pos"].plot(current_time, balloon["rel_y"])
+
+        if "c_K" in self.curves:
+            self.curves["c_K"].plot(current_time, cell["energies"].kinetic)
+        if "c_U" in self.curves:
+            self.curves["c_U"].plot(current_time, cell["energies"].potential)
+        if "c_E" in self.curves:
+            self.curves["c_E"].plot(current_time, cell["energies"].mechanical)
+
+        if "b_K" in self.curves:
+            self.curves["b_K"].plot(current_time, balloon["energies"].kinetic)
+        if "b_U" in self.curves:
+            self.curves["b_U"].plot(current_time, balloon["energies"].potential)
+        if "b_E" in self.curves:
+            self.curves["b_E"].plot(current_time, balloon["energies"].mechanical)
 
     def run(self) -> None:
         """Main rendering loop."""
@@ -150,9 +300,12 @@ class VPythonRenderer:
             rate(60)
             if self.is_running:
                 snapshot = self.engine.get_snapshot(self.t, self.active_ref)
-                
-                # Stop condition (if cellphone hits ground)
-                if snapshot["cellphone"]["abs_y"] > self.meshes["ground"].pos.y + self.meshes["cellphone"].size.y / 2:
+
+                if (
+                    snapshot["cellphone"]["abs_y"]
+                    > self.meshes["ground"].pos.y
+                    + self.meshes["cellphone"].size.y / 2
+                ):
                     self._update_visuals(snapshot)
                     self._plot_graphs(self.t, snapshot)
                     self.t += self.dt
