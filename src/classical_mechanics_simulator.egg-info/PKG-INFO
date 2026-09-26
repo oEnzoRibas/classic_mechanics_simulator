@@ -3,5 +3,8 @@ Name: classical-mechanics-simulator
 Version: 0.0.1
 Summary: Educational mechanics simulator
 Requires-Python: <3.13,>=3.12
+License-File: LICENSE
 Requires-Dist: vpython==7.6.5
 Requires-Dist: numpy>=2.3.0
+Requires-Dist: latex2mathml>=3.81.1
+Dynamic: license-file
