@@ -2,36 +2,41 @@
 
 An educational physics and mechanics simulator built with VPython.
 
-This project is developed by Students of the Federal Center of Technological Education of Minas Gerais (CEFET-MG) as part of a extension project by the Physics Department, with the aim of creating interactive simulations to support physics education and outreach activities.
+This project is developed by Students of the Federal University of Science and Technology of Minas Gerais (UFCI-MG) as part of a extension project by the Physics Department, with the aim of creating interactive simulations to support physics education and outreach activities.
 
 This project was created to support outreach and educational activities in elementary and high schools, providing interactive visualizations of classical mechanics concepts through simple and intuitive simulations.
 
 The goal is to make physics more accessible by allowing students to observe, experiment, and interact with simulations in real time.
 
+## Showcase
+
+![pendulumSim](assets/pendulum.gif)
+
 ## Features
 
-* Interactive 3D simulations
-* Real-time visualization of physical phenomena
-* Educational focus for classroom demonstrations
-* Simple and extensible architecture
-* Open-source and beginner-friendly codebase
+- Interactive 3D simulations
+- Real-time visualization of physical phenomena
+- Educational focus for classroom demonstrations
+- Simple and extensible architecture
+- Open-source and beginner-friendly codebase
 
-## Planned Simulations
+## Planned Problems to Simulate
 
-* Relative motion between two objects
-* 
+- Relative motion between two objects
+- Ballistics
+-
 
 ## Technology Stack
 
-* Python 3.12
-* VPython
-* NumPy
-* UV Package Manager
+- Python 3.12
+- VPython
+- NumPy
+- UV Package Manager
 
 ## Requirements
 
-* Python 3.12.x
-* UV package manager
+- Python 3.12.x
+- UV package manager
 
 ## Installation
 
