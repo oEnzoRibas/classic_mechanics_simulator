@@ -1,6 +1,23 @@
 from vpython import *
-from relative_movement.balloon.physics_core import PointMass, SimulationEngine, GRAVITY
+from relative_movement.balloon.physics_core import (
+    PointMass,
+    SimulationEngine,
+    GRAVITY,
+)
 from typing import Dict, List, Optional
+
+from pathlib import Path
+import re
+from string import Template
+
+
+from latex2mathml.converter import convert as latex_to_mathml
+
+
+BASE_DIR = Path(__file__).resolve().parent
+ANALYTICAL_SOLUTION_FILE = BASE_DIR / "solutions/analytical_solution.tex"
+MODAL_TEMPLATE_FILE = BASE_DIR / "templates/analytical_solution_modal.html"
+
 
 # --- UI Constants ---
 
@@ -33,9 +50,11 @@ class VPythonRenderer:
         self.curves: Dict[str, gcurve] = {}
         self.all_curves: List[gcurve] = []
 
+
         self._setup_scene()
         self._setup_graphs()
         self._setup_ui_controls()
+
 
         initial_snapshot = self.engine.get_snapshot(0.0, self.active_ref)
         self._update_visuals(initial_snapshot)
@@ -178,6 +197,68 @@ class VPythonRenderer:
                 [self.curves["b_K"], self.curves["b_U"], self.curves["b_E"]]
             )
 
+    
+    @staticmethod
+    def _render_latex(content: str) -> str:
+        r"""
+        Converts LaTeX math delimited by \( ... \) and \[ ... \]
+        to MathML.
+        """
+
+        def replace_display(match):
+            expression = match.group(1).strip()
+
+            mathml = latex_to_mathml(expression)
+
+            return mathml.replace(
+                "<math",
+                '<math display="block"',
+                1
+            )
+
+        def replace_inline(match):
+            expression = match.group(1).strip()
+            return latex_to_mathml(expression)
+
+        # \[ ... \]
+        content = re.sub(
+            r"\\\[(.*?)\\\]",
+            replace_display,
+            content,
+            flags=re.DOTALL
+        )
+
+        # \( ... \)
+        content = re.sub(
+            r"\\\((.*?)\\\)",
+            replace_inline,
+            content,
+            flags=re.DOTALL
+        )
+
+        return content
+
+    def _build_analytical_solution(self) -> str:
+        latex_content = ANALYTICAL_SOLUTION_FILE.read_text(
+            encoding="utf-8"
+        )
+
+        rendered_content = self._render_latex(
+            latex_content
+        )
+
+        modal_template = Template(
+            MODAL_TEMPLATE_FILE.read_text(
+                encoding="utf-8"
+            )
+        )
+
+        return modal_template.substitute(
+            TITLE="Solução Analítica",
+            SUBTITLE="Resolução matemática do problema",
+            CONTENT=rendered_content,
+        )
+    
     def _setup_ui_controls(self) -> None:
         """Injects UI buttons and drop-down selectors into the VPython DOM."""
         self.btn_pause = button(
@@ -212,6 +293,14 @@ class VPythonRenderer:
             bind=self._on_graph_menu_change,
         )
         self.scene.append_to_caption("\n<hr>")
+
+        self.btn_solution = button(
+            text="📐 SOLUÇÃO ANALÍTICA",
+            bind=self.show_analytical_solution,
+            background=color.cyan
+        )
+
+        self.solution_card = wtext(text="")
 
     # --- Event Handlers ---
 
@@ -292,6 +381,14 @@ class VPythonRenderer:
             snap = self.engine.get_snapshot(history_t, self.active_ref)
             self._plot_graphs(history_t, snap)
             history_t += self.dt
+
+    def show_analytical_solution(self, b) -> None:
+        if self.is_running:
+            self.toggle_pause(self.btn_pause)
+
+        self.solution_card.text = ""
+        self.solution_card.text = self._build_analytical_solution()
+
 
     # --- Render Loop ---
 
