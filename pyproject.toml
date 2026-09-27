@@ -8,6 +8,7 @@ dependencies = [
     "vpython==7.6.5",
     "numpy>=2.3.0",
     "latex2mathml>=3.81.1",
+    "matplotlib>=3.11.2",
 ]
 
 [dependency-groups]

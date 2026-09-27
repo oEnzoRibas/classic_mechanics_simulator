@@ -2,7 +2,7 @@
 
 from vpython import *
 
-from differential_equations.edo1_physics_core import (
+from differential_equations.edo_physics_core import (
     DifferentialEquation,
     EulerSolver,
     RK4Solver,
@@ -34,7 +34,7 @@ def boat_equation(t, y):
     position = y[0]
     velocity = y[1]
 
-    k = -70/MASS
+    k = -700/MASS
 
     return (
         velocity,
