@@ -1,19 +1,17 @@
 from vpython import *
 
 # 1. Configuração da Cena 3D
-scene = canvas(title="<b>Simulador Cinemático: Decomposição Vetorial (vx e vy)</b>", width=800, height=500,align="left", center=vector(40, 30, 0), background=color.gray(0.9))
+scene = canvas(title="<b>Simulador Cinemático: Decomposição Vetorial (vx e vy)</b>", width=700, height=500, align="left", center=vector(40, 30, 0), background=color.gray(0.9))
 scene.camera.pos = vector(40, 30, 110)
 
 # 2. Configuração dos Gráficos
-# Gráfico de Posiçãhttps://glowscript.org/#/user/ericvicentt/folder/MyPrograms/program/Lan%C3%A7amentodeprojeteiso: Escala LIVRE (auto-scaling) para melhor visualização da parábola
-g_yt = graph(title="Posição Vertical (y x t)", xtitle="Tempo t (s)", ytitle="Altura y (m)", width=300, height=200, align="right", xmin=0, xmax=12, ymin=-5, ymax=70)
+g_yt = graph(title="Posição Vertical (y x t)", xtitle="Tempo t (s)", ytitle="Altura y (m)", width=350, height=180, align="right", xmin=0, xmax=12, ymin=-5, ymax=70)
 curva_yt = gcurve(graph=g_yt, color=color.blue, width=2)
 
-# Gráficos de Velocidade: Escala FIXA para não distorcer a leitura da aceleração
-g_vx = graph(title="Velocidade Horizontal (vx x t)", xtitle="Tempo t (s)", ytitle="vx (m/s)", width=300, height=200, align="right-top", xmin=0, xmax=12, ymin=-5, ymax=55)
+g_vx = graph(title="Velocidade Horizontal (vx x t)", xtitle="Tempo t (s)", ytitle="vx (m/s)", width=350, height=180, align="right", xmin=0, xmax=12, ymin=-5, ymax=55)
 curva_vx = gcurve(graph=g_vx, color=color.cyan, width=2)
 
-g_vy = graph(title="Velocidade Vertical (vy x t)", xtitle="Tempo t (s)", ytitle="vy (m/s)", width=300, height=200, align="right", xmin=0, xmax=12, ymin=-75, ymax=55)
+g_vy = graph(title="Velocidade Vertical (vy x t)", xtitle="Tempo t (s)", ytitle="vy (m/s)", width=350, height=180, align="right", xmin=0, xmax=12, ymin=-75, ymax=55)
 curva_vy = gcurve(graph=g_vy, color=color.orange, width=2)
 
 # 3. Parâmetros Físicos
@@ -25,9 +23,10 @@ dt = 0.01
 chao = box(pos=vector(40, -1, 0), size=vector(250, 2, 20), color=vector(0.2, 0.6, 0.2))
 projetil = sphere(pos=vector(0, 0, 0), radius=1.5, color=color.purple, make_trail=True, trail_type="points", interval=10)
 
-# Vetores DECOMPOSTOS
-seta_vx = arrow(pos=projetil.pos, axis=vector(0,0,0), color=color.cyan, shaftwidth=0.9, headwidth=2.2)
-seta_vy = arrow(pos=projetil.pos, axis=vector(0,0,0), color=color.orange, shaftwidth=0.9, headwidth=2.2)
+# Vetores
+seta_vx = arrow(pos=projetil.pos, axis=vector(0,0,0), color=color.cyan, shaftwidth=0.9, headwidth=2.2, visible=True)
+seta_vy = arrow(pos=projetil.pos, axis=vector(0,0,0), color=color.orange, shaftwidth=0.9, headwidth=2.2, visible=True)
+seta_v = arrow(pos=projetil.pos, axis=vector(0,0,0), color=color.red, shaftwidth=0.9, headwidth=2.2, visible=False)
 
 # Réguas do cenário
 eixo_x = arrow(pos=vector(0,0,0), axis=vector(180,0,0), color=color.black, shaftwidth=0.2)
@@ -53,10 +52,15 @@ scene.append_to_caption('\n<b>Parâmetros Iniciais</b>\n')
 
 def atualiza_y0(s):
     texto_y0.text = f" {s.value} m"
+    
+    # Adicione esta linha para somar a altura inicial ao limite de 70
+    g_yt.ymax = 70 + s.value 
+    
     if not lancando:
         projetil.pos.y = s.value
         seta_vx.pos = projetil.pos
         seta_vy.pos = projetil.pos
+        seta_v.pos = projetil.pos
 
 scene.append_to_caption('Altura Inicial (y₀): ')
 sl_y0 = slider(min=0, max=80, value=0, step=1, length=200, bind=atualiza_y0)
@@ -77,6 +81,32 @@ def atualiza_angulo(s):
 scene.append_to_caption('Ângulo (θ): ')
 sl_angulo = slider(min=0, max=90, value=60, step=1, length=200, bind=atualiza_angulo)
 texto_angulo = wtext(text=" 60 graus")
+scene.append_to_caption('\n\n')
+
+scene.append_to_caption('<b>Modo dos Vetores: </b>')
+def seleciona_modo_vetor(m):
+    modo = m.selected
+    if modo == "Componentes separadas (vx, vy)":
+        seta_vx.visible = True
+        seta_vy.visible = True
+        seta_v.visible = False
+    elif modo == "Vetor Resultante (v)":
+        seta_vx.visible = False
+        seta_vy.visible = False
+        seta_v.visible = True
+    elif modo == "Resultante e Separadas":
+        seta_vx.visible = True
+        seta_vy.visible = True
+        seta_v.visible = True
+
+menu_vetores = menu(choices=["Componentes separadas (vx, vy)", "Vetor Resultante (v)", "Resultante e Separadas"], bind=seleciona_modo_vetor)
+
+scene.append_to_caption('&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;')
+
+def toggle_camera(c):
+    pass 
+
+cam_dinamica = checkbox(text='<b> Câmera Dinâmica (Follow & Zoom)</b>', bind=toggle_camera, checked=False)
 scene.append_to_caption('\n\n')
 
 def disparar(b):
@@ -103,16 +133,25 @@ scene.append_to_caption('\n\n<i>Note: O gráfico de posição vertical ajusta su
 while True:
     rate(100)
     
+    if cam_dinamica.checked:
+        scene.center = projetil.pos
+        scene.range = 55
+    else:
+        scene.center = vector(40, 30, 0)
+        scene.range = 95 
+    
     if lancando:
         v = v + g * dt
         projetil.pos = projetil.pos + v * dt
         t = t + dt
         
         seta_vx.pos = projetil.pos
-        seta_vx.axis = vector(v.x * 0.4, 0, 0)
-        
         seta_vy.pos = projetil.pos
+        seta_v.pos = projetil.pos
+        
+        seta_vx.axis = vector(v.x * 0.4, 0, 0)
         seta_vy.axis = vector(0, v.y * 0.4, 0)
+        seta_v.axis = vector(v.x * 0.4, v.y * 0.4, 0)
         
         curva_yt.plot(t, projetil.pos.y)
         curva_vx.plot(t, v.x)
@@ -122,3 +161,4 @@ while True:
             lancando = False
             projetil.pos.y = 0
             seta_vy.axis = vector(0,0,0)
+            seta_v.axis = vector(v.x * 0.4, 0, 0)
