@@ -1,108 +1,48 @@
-# VPython Mechanics Simulator
+# Classic Mechanics Simulator
 
-An educational physics and mechanics simulator built with VPython.
+An experimental scientific computing project focused on the modeling, numerical simulation, and visualization of classical mechanics phenomena.
 
-This project is developed by Students of the Federal University of Science and Technology of Minas Gerais (UFCI-MG) as part of a extension project by the Physics Department, with the aim of creating interactive simulations to support physics education and outreach activities.
+The project explores different approaches to implementing physics simulations in Python, investigating how mathematical models, numerical methods, computational tools, and visualization techniques can be combined to represent physical systems accurately and intuitively.
 
-This project was created to support outreach and educational activities in elementary and high schools, providing interactive visualizations of classical mechanics concepts through simple and intuitive simulations.
-
-The goal is to make physics more accessible by allowing students to observe, experiment, and interact with simulations in real time.
+Rather than being tied to a single graphics library or simulation framework, the project provides a space for experimentation with different technologies and implementation strategies.
 
 ## Showcase
 
 ![pendulumSim](assets/pendulum.gif)
 
-## Features
+## Purpose
 
-- Interactive 3D simulations
-- Real-time visualization of physical phenomena
-- Educational focus for classroom demonstrations
-- Simple and extensible architecture
-- Open-source and beginner-friendly codebase
+Classical mechanics provides mathematical models for describing motion, forces, and the evolution of physical systems. Translating these models into computational simulations introduces additional questions concerning numerical integration, accuracy, performance, and visualization.
 
-## Planned Problems to Simulate
+This project explores these questions through practical implementations of classical mechanics problems.
 
-- Relative motion between two objects
-- Ballistics
--
+The goal is to develop simulations that are both educationally useful and technically meaningful, connecting theoretical physics with scientific programming and computational experimentation.
 
-## Technology Stack
+## Project Scope
 
-- Python 3.12
-- VPython
-- NumPy
-- UV Package Manager
+The project explores three complementary areas:
 
-## Requirements
+- **Physical modeling:** Translating mechanics problems into mathematical equations and computational models.
+- **Numerical simulation:** Implementing and experimenting with computational approaches to approximate physical behavior.
+- **Visualization:** Exploring different ways to represent trajectories, physical objects, and time-dependent quantities.
 
-- Python 3.12.x
-- UV package manager
+These areas are interconnected, but they do not necessarily require the same tools or implementation strategy for every problem.
 
-## Installation
+## Educational and Scientific Applications
 
-1. Clone the repository:
+The project supports exploration at the intersection of physics and software development, including:
 
-   ```bash
-   git clone https://github.com/oenzoribas/vpython-mechanics-simulator.git
-   cd vpython-mechanics-simulator
-   ```
+- Computational modeling of mechanical systems.
+- Visualization of physical phenomena.
+- Numerical approximation of differential equations.
+- Comparison of alternative implementations and computational tools.
+- Educational demonstrations and interactive experimentation.
+- Investigation of numerical accuracy and computational performance.
 
-2. Install UV (if not already installed):
+The specific methods and validation criteria depend on the physical problem being studied.
 
-   ```bash
-   pip install uv
-   ```
+## Educational Context
 
-   Or follow the official installation guide:
+The project is associated with educational and scientific outreach activities involving classical mechanics and physics education.
 
-   https://docs.astral.sh/uv/getting-started/installation/
-
-3. Install project dependencies:
-
-   ```bash
-   uv sync
-   ```
-
-## Running a Simulation
-
-Example:
-
-```bash
-uv run python sandbox/free_fall.py
-```
-
-## Development Mode
-
-The project includes a development script with automatic reload when source files change:
-
-```bash
-dev.bat
-```
-
-## Testing the Installation
-
-Verify that VPython is correctly installed:
-
-```bash
-uv run python -c "from vpython import *; print('VPython OK')"
-```
-
-Expected output:
-
-```text
-VPython OK
-```
-
-## Educational Purpose
-
-This project is being developed as an educational tool for outreach programs and STEM education initiatives. It aims to help students understand fundamental concepts in physics through interactive experimentation and visualization.
-
-<!-- ## Contributing
-
-Contributions are welcome.
-
-Feel free to open issues, submit pull requests, or propose new simulations and educational features.
-
-## License
-
-This project is licensed under the MIT License. -->
+Its broader objective is to make physical phenomena easier to investigate by connecting mathematical descriptions with computational experiments and visual representations.
