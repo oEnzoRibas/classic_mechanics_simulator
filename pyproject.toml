@@ -1,3 +1,8 @@
+[build-system]
+requires = ["setuptools>=75.8.0"]
+build-backend = "setuptools.build_meta"
+
+
 [project]
 name = "classical-mechanics-simulator"
 version = "0.0.1"
@@ -11,11 +16,26 @@ dependencies = [
     "matplotlib>=3.11.2",
 ]
 
+
 [dependency-groups]
 dev = [
     "watchdog>=6.0.0",
-    "setuptools==75.8.0"
 ]
+
+
+[tool.uv]
+package = true
+
 
 [tool.setuptools.packages.find]
 where = ["src"]
+include = [
+    "relative_movement*",
+    "common*",
+]
+
+
+[tool.setuptools.package-data]
+"relative_movement.balloon.apps.vpython" = [
+    "solutions/*.tex",
+]

@@ -7,4 +7,5 @@ License-File: LICENSE
 Requires-Dist: vpython==7.6.5
 Requires-Dist: numpy>=2.3.0
 Requires-Dist: latex2mathml>=3.81.1
+Requires-Dist: matplotlib>=3.11.2
 Dynamic: license-file
