@@ -291,7 +291,7 @@ wheels = [
 [[package]]
 name = "classical-mechanics-simulator"
 version = "0.0.1"
-source = { virtual = "." }
+source = { editable = "." }
 dependencies = [
     { name = "latex2mathml" },
     { name = "matplotlib" },
@@ -301,7 +301,6 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
-    { name = "setuptools" },
     { name = "watchdog" },
 ]
 
@@ -314,10 +313,7 @@ requires-dist = [
 ]
 
 [package.metadata.requires-dev]
-dev = [
-    { name = "setuptools", specifier = "==75.8.0" },
-    { name = "watchdog", specifier = ">=6.0.0" },
-]
+dev = [{ name = "watchdog", specifier = ">=6.0.0" }]
 
 [[package]]
 name = "colorama"

@@ -1,3 +1,2 @@
-ballistics
-differential_equations
+common
 relative_movement
