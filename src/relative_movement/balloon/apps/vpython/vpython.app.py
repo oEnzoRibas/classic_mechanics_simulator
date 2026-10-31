@@ -33,13 +33,13 @@ ANALYTICAL_SOLUTION_FILE = (
     BASE_DIR / "solutions" / "ballon_problem_enunciation.tex"
 )
 
-GRAPH_W = 650
-GRAPH_H = 200
-GRAPH_XMAX = 2.8
-GRAPH_SCALE = 1.5
+CANVAS_W = 960
+CANVAS_H = 540
+
+GRAPH_W = 960
+GRAPH_H = 230
+
 VELOCITY_ARROW_SCALE = 0.9
-CANVAS_H = 600
-CANVAS_W = 520
 
 # Physical defaults belong to this scenario, not the general-purpose engine.
 DEFAULT_CELL_MASS = 1.0
@@ -54,27 +54,75 @@ class VPythonRenderer:
     """Present a two-body example and graph the engine's snapshots."""
 
     def __init__(self, engine: SimulationEngine) -> None:
-        if not {"cellphone", "balloon"}.issubset(engine.objects):
-            raise ValueError("The balloon application needs cellphone and balloon.")
+            if not {"cellphone", "balloon"}.issubset(engine.objects):
+                raise ValueError(
+                    "The simulation requires cellphone and balloon."
+                )
 
-        self.engine = engine
-        self.dt = 0.01
-        self.t = 0.0
-        self.is_running = False
-        self.has_landed = False
-        self.active_ref = "ground"
-        self.active_graph_view = "pos"
-        self.graphs: dict[str, object] = {}
-        self.curves: dict[str, object] = {}
+            # Physics engine
+            self.engine = engine
 
-        self._setup_scene()
-        self.cards = CardCenter(pos=self.scene.caption_anchor)
-        self._setup_graphs()
-        self._setup_ui_controls()
+            # Simulation state
+            self.dt = 0.01
+            self.t = 0.0
+            self.is_running = False
+            self.has_landed = False
 
-        first = self.engine.get_snapshot(0.0, self.active_ref)
-        self._update_visuals(first)
-        self._plot_graphs(0.0, first)
+            # Reference frame and graphs
+            self.active_ref = "ground"
+            self.active_graph_view = "none"
+
+            self.graphs: dict[str, object] = {}
+            self.curves: dict[str, object] = {}
+
+            # Initialize 3D scene
+            self._setup_scene()
+
+            # Camera state
+            self.camera_mode = "fixed"
+
+            # Preserve the original camera configuration
+            self._initial_camera_center = vec(
+                self.scene.center.x,
+                self.scene.center.y,
+                self.scene.center.z,
+            )
+
+            self._initial_camera_forward = vec(
+                self.scene.forward.x,
+                self.scene.forward.y,
+                self.scene.forward.z,
+            )
+
+            self._initial_camera_up = vec(
+                self.scene.up.x,
+                self.scene.up.y,
+                self.scene.up.z,
+            )
+
+            self._initial_camera_range = self.scene.range
+            
+            # Modal manager
+            self.cards = CardCenter(
+                pos=self.scene.caption_anchor,
+                modal_pos=self.scene.title_anchor,
+            )
+
+            # Initialize user interface
+            self._setup_ui_controls()
+
+            # Initialize graphs
+            self._setup_graphs()
+
+            # Initial physics snapshot
+            first = self.engine.get_snapshot(
+                0.0,
+                self.active_ref,
+            )
+
+            self._update_visuals(first)
+            self._plot_graphs(0.0, first)
+
 
     # ---- VPython scene -------------------------------------------------
 
@@ -84,7 +132,7 @@ class VPythonRenderer:
             width=CANVAS_W,
             height=CANVAS_H,
             background=vec(0.0, 0.08, 0.2),
-            title="<h2>Kinematics &amp; Reference Frames</h2>",
+            title="<h2>Balloon Relative Movement Simulation. Made by oEnzoRibas @ UFCIMG</h2>",
         )
         self.scene.center = vec(0, 10, 30)
         self.scene.range = 25
@@ -98,7 +146,7 @@ class VPythonRenderer:
                 pos=vec(-2, 10, 3), radius=1.2, color=color.cyan
             ),
             "cellphone": box(
-                pos=vec(2, 10, 3), size=vec(2, 2, 2), color=color.red
+                pos=vec(2, 10, 3), size=vec(2, 3, 2), color=color.red
             ),
         }
         self.velocity_arrows = {
@@ -136,18 +184,17 @@ class VPythonRenderer:
         show_position = self.active_graph_view in ("all", "pos")
         show_cell_energy = self.active_graph_view in ("all", "cell_eng")
         show_balloon_energy = self.active_graph_view in ("all", "balloon_eng")
-        scale = 1 if self.active_graph_view == "all" else GRAPH_SCALE
-        width, height = int(GRAPH_W * scale), int(GRAPH_H * scale)
+        width = GRAPH_W
+        height = GRAPH_H
 
         if show_position:
             chart = graph(
-                align="right",
                 title="<b>Relative Position (m)</b>",
                 xtitle="Time (s)",
                 ytitle="Position (m)",
                 width=width,
                 height=height,
-                xmax=GRAPH_XMAX,
+                # xmax=GRAPH_XMAX,
             )
             self.graphs["pos"] = chart
             self.curves["c_pos"] = gcurve(
@@ -159,13 +206,12 @@ class VPythonRenderer:
 
         if show_cell_energy:
             chart = graph(
-                align="right",
                 title="<b>Cellphone Energy (J)</b>",
                 xtitle="Time (s)",
                 ytitle="Energy (J)",
                 width=width,
                 height=height,
-                xmax=GRAPH_XMAX,
+                # xmax=GRAPH_XMAX,
             )
             self.graphs["cell_eng"] = chart
             self.curves["c_K"] = gcurve(
@@ -180,13 +226,12 @@ class VPythonRenderer:
 
         if show_balloon_energy:
             chart = graph(
-                align="right",
                 title="<b>Balloon Energy (J)</b>",
                 xtitle="Time (s)",
                 ytitle="Energy (J)",
                 width=width,
                 height=height,
-                xmax=GRAPH_XMAX,
+                # xmax=GRAPH_XMAX,
             )
             self.graphs["balloon_eng"] = chart
             self.curves["b_K"] = gcurve(
@@ -216,6 +261,8 @@ class VPythonRenderer:
 
     def _replot_history(self) -> None:
         """Rebuild the graph using the current frame, including contact time."""
+        if not self.curves:
+            return
         last_sample = -1.0
         for index in range(int(self.t / self.dt) + 1):
             sample_t = index * self.dt
@@ -229,97 +276,343 @@ class VPythonRenderer:
 
     # ---- UI ------------------------------------------------------------
 
-    def _setup_ui_controls(self) -> None:
-        self.btn_pause = button(
-            pos=self.scene.caption_anchor,
-            text="▶ PLAY", bind=self.toggle_pause, background=color.green
+    # ---------------------------------------------------------
+    # CAMERA CONTROLS
+    # ---------------------------------------------------------
+
+    def _setup_camera_controls(self) -> None:
+        """Create camera settings inside the parameter panel."""
+
+        self.scene.append_to_caption(
+            '<span style="'
+            'display:inline-block;'
+            'box-sizing:border-box;'
+            'width:420px;'
+            'margin:6px 0 4px 12px;'
+            'padding:3px 8px;'
+            'border-left:3px solid #0d9488;'
+            'background:#eaf3f5;'
+            'color:#115e59;'
+            'font:700 11px Arial,sans-serif">'
+            'CAMERA'
+            '</span><br>'
         )
-        self.scene.append_to_caption("  ")
+
+        self.scene.append_to_caption(
+            '<span style="'
+            'display:inline-block;'
+            'width:70px;'
+            'margin-left:12px;'
+            'font:500 12px Arial,sans-serif;'
+            'color:#334155">'
+            'Mode'
+            '</span>'
+        )
+
+        self.camera_menu = menu(
+            pos=self.scene.caption_anchor,
+            choices=[
+                "Fixed (initial)",
+                "Follow cellphone",
+                "Follow balloon",
+            ],
+            selected="Fixed (initial)",
+            bind=self._on_camera_mode_change,
+        )
+
+        self.scene.append_to_caption("&nbsp;&nbsp;")
+
         button(
             pos=self.scene.caption_anchor,
-            text="🔄 RESTART", bind=self.restart_sim, background=color.blue
+            text="RESET CAMERA",
+            bind=self.reset_camera,
+            background=color.gray(0.85),
         )
-        self.scene.append_to_caption("\n<b>Active Reference:</b> &nbsp;&nbsp;")
+
+        self.scene.append_to_caption("<br>")
+
+    def _on_camera_mode_change(self, widget: menu) -> None:
+        """Switch tracking mode without restarting the simulation."""
+
+        modes = {
+            "Fixed (initial)": "fixed",
+            "Follow cellphone": "cellphone",
+            "Follow balloon": "balloon",
+        }
+
+        selected = widget.selected
+
+        if selected not in modes:
+            return
+
+        self.camera_mode = modes[selected]
+
+        if self.camera_mode == "fixed":
+            # Return to the original reference position.
+            original = self._initial_camera_center
+
+            self.scene.center = vec(
+                original.x,
+                original.y,
+                original.z,
+            )
+        else:
+            # Start following immediately, even when paused.
+            self._update_camera()
+
+    def _update_camera(self) -> None:
+        """Follow the selected object's vertical movement."""
+
+        if self.camera_mode == "fixed":
+            return
+
+        target = self.meshes.get(self.camera_mode)
+
+        if target is None:
+            return
+
+        original = self._initial_camera_center
+
+        # Move the viewpoint vertically with the object.
+        # Preserve the initial horizontal/depth framing.
+        self.scene.center = vec(
+            original.x,
+            target.pos.y,
+            original.z,
+        )
+
+    def reset_camera(self, _event: object = None) -> None:
+        """Restore the original camera position, zoom and orientation."""
+
+        self.camera_mode = "fixed"
+
+        center = self._initial_camera_center
+        forward = self._initial_camera_forward
+        up = self._initial_camera_up
+
+        self.scene.center = vec(
+            center.x,
+            center.y,
+            center.z,
+        )
+
+        self.scene.forward = vec(
+            forward.x,
+            forward.y,
+            forward.z,
+        )
+
+        self.scene.up = vec(
+            up.x,
+            up.y,
+            up.z,
+        )
+
+        self.scene.range = self._initial_camera_range
+
+        # Keep the dropdown synchronized with the actual mode.
+        self.camera_menu.selected = "Fixed (initial)"
+
+
+
+    def _setup_ui_controls(self) -> None:
+        """Build a compact right-hand control column."""
+
+        self.scene.append_to_caption(
+            '<span style="display:inline-block;'
+            'box-sizing:border-box;width:420px;'
+            'margin:5px 0 6px 12px;padding:7px 0;'
+            'border-bottom:1px solid #cbd5e1;'
+            'color:#0f172a;'
+            'font:700 15px Arial,sans-serif">'
+            'SIMULATION'
+            '</span><br>'
+        )
+
+        # Playback
+
+        self.scene.append_to_caption(
+            self._control_label("Playback")
+        )
+
+        self.btn_pause = button(
+            pos=self.scene.caption_anchor,
+            text="PLAY",
+            bind=self.toggle_pause,
+            background=color.green,
+        )
+
+        self.scene.append_to_caption("&nbsp;&nbsp;")
+
+        button(
+            pos=self.scene.caption_anchor,
+            text="RESTART",
+            bind=self.restart_sim,
+            background=color.cyan,
+        )
+
+        self.scene.append_to_caption("<br>")
+
+        # Reference frame
+
+        self.scene.append_to_caption(
+            self._control_label("Reference")
+        )
 
         self.btn_ground = button(
             pos=self.scene.caption_anchor,
-            text="◉ GROUND", bind=lambda _: self.change_ref("ground"),
+            text="◉ GROUND",
+            bind=lambda _: self.change_ref("ground"),
             background=color.green,
         )
-        self.scene.append_to_caption("  ")
+
+        self.scene.append_to_caption("&nbsp;")
+
         self.btn_cell = button(
             pos=self.scene.caption_anchor,
-            text="○ CELLPHONE", bind=lambda _: self.change_ref("cellphone"),
-            background=color.gray(0.5),
+            text="○ CELLPHONE",
+            bind=lambda _: self.change_ref("cellphone"),
+            background=color.gray(0.75),
         )
-        self.scene.append_to_caption("  ")
+
+        self.scene.append_to_caption("&nbsp;")
+
         self.btn_balloon = button(
             pos=self.scene.caption_anchor,
-            text="○ BALLOON", bind=lambda _: self.change_ref("balloon"),
-            background=color.gray(0.5),
+            text="○ BALLOON",
+            bind=lambda _: self.change_ref("balloon"),
+            background=color.gray(0.75),
         )
 
-        self.scene.append_to_caption("\n<b>Display Graphs:</b> &nbsp;&nbsp;")
+        self.scene.append_to_caption("<br>")
+
+        # Graph selector
+
+        self.scene.append_to_caption(
+            self._control_label("Graphs")
+        )
+
         self.menu_graphs = menu(
             pos=self.scene.caption_anchor,
-            choices=["ALL", "Position", "Cellphone Energy", "Balloon Energy"],
-            selected="Position",
+            choices=[
+                "NONE",
+                "Position",
+                "Cellphone Energy",
+                "Balloon Energy",
+                "ALL",
+            ],
+            selected="NONE",
             bind=self._on_graph_menu_change,
         )
-        self.scene.append_to_caption("\n<hr>")
-        button(
-            pos=self.scene.caption_anchor,
-            text="📐 SOLUÇÃO ANALÍTICA",
-            bind=self.show_analytical_solution,
-            background=color.cyan,
-        )
-        self.scene.append_to_caption("\n<hr>")
+
+        self.scene.append_to_caption("<br>")
+
+        # Problem statement modal
+
+        self._setup_problem_statement_modal()
+
+        self.scene.append_to_caption("<br>")
+
         self._setup_parameter_controls()
 
+    @staticmethod
+    def _control_label(label: str) -> str:
+        """Fixed-width labels for the control column."""
+
+        return (
+            '<span style="'
+            'display:inline-block;'
+            'box-sizing:border-box;'
+            'width:112px;'
+            'margin-left:12px;'
+            'vertical-align:middle;'
+            'font:600 12px Arial,sans-serif;'
+            'color:#475569">'
+            f'{label}'
+            '</span>'
+        )
+
     def _setup_parameter_controls(self) -> None:
-        cell = self.engine.objects["cellphone"]
+        """Build the simulation control panel."""
+
+        cellphone = self.engine.objects["cellphone"]
         balloon = self.engine.objects["balloon"]
-        params = [
+
+        parameters = [
+            # Environment
             Parameter(
-                "gravity", "Gravidade (m/s²)", self.engine.gravity,
-                minimum=0, group="Ambiente", default=GRAVITY,
+                name="gravity",
+                label="Gravity (m/s²)",
+                value=self.engine.gravity,
+                minimum=0,
+                group="Environment",
+                default=GRAVITY,
+            ),
+
+            # Cellphone
+            Parameter(
+                name="cell_mass",
+                label="Mass (kg)",
+                value=cellphone.mass,
+                minimum=1e-9,
+                group="Cellphone",
+                default=DEFAULT_CELL_MASS,
             ),
             Parameter(
-                "cell_mass", "Massa (kg)", cell.mass,
-                minimum=1e-9, group="Celular", default=DEFAULT_CELL_MASS,
+                name="cell_y",
+                label="Initial Height (m)",
+                value=cellphone.initial_y,
+                minimum=self.contact_y,
+                group="Cellphone",
+                default=DEFAULT_CELL_Y,
             ),
             Parameter(
-                "cell_y", "Posição inicial (m)", cell.initial_y,
-                minimum=self.contact_y, group="Celular", default=DEFAULT_CELL_Y,
+                name="cell_v",
+                label="Initial Velocity (m/s)",
+                value=cellphone.initial_v,
+                group="Cellphone",
+                default=DEFAULT_CELL_V,
+            ),
+
+            # Balloon
+            Parameter(
+                name="balloon_mass",
+                label="Mass (kg)",
+                value=balloon.mass,
+                minimum=1e-9,
+                group="Balloon",
+                default=DEFAULT_BALLOON_MASS,
             ),
             Parameter(
-                "cell_v", "Velocidade inicial (m/s)", cell.initial_v,
-                group="Celular", default=DEFAULT_CELL_V,
+                name="balloon_y",
+                label="Initial Height (m)",
+                value=balloon.initial_y,
+                group="Balloon",
+                default=DEFAULT_BALLOON_Y,
             ),
             Parameter(
-                "balloon_mass", "Massa (kg)", balloon.mass,
-                minimum=1e-9, group="Balão", default=DEFAULT_BALLOON_MASS,
-            ),
-            Parameter(
-                "balloon_y", "Posição inicial (m)", balloon.initial_y,
-                group="Balão", default=DEFAULT_BALLOON_Y,
-            ),
-            Parameter(
-                "balloon_v", "Velocidade inicial (m/s)", balloon.initial_v,
-                group="Balão", default=DEFAULT_BALLOON_V,
+                name="balloon_v",
+                label="Initial Velocity (m/s)",
+                value=balloon.initial_v,
+                group="Balloon",
+                default=DEFAULT_BALLOON_V,
             ),
         ]
+
         self.parameter_panel = ParameterPanel(
-            title="⚙ Central de Controle",
-            parameters=params,
+            title="PARAMETERS",
+            parameters=parameters,
             on_apply=self._apply_parameters,
             pos=self.scene.caption_anchor,
+            extra_controls=self._setup_camera_controls,
         )
 
     def _apply_parameters(self, values: dict[str, float | int]) -> None:
         """Called after ParameterPanel has validated all numeric fields."""
         if values["cell_y"] <= self.contact_y:
-            raise ValueError("O celular deve começar acima do chão.")
+            raise ValueError(
+                "The cellphone must start above ground level."
+            )
 
         cellphone = PointMass(
             name="cellphone", mass=values["cell_mass"],
@@ -339,23 +632,43 @@ class VPythonRenderer:
 
     def _on_graph_menu_change(self, selected_menu: menu) -> None:
         selected = selected_menu.selected
+
         selection = {
             "ALL": "all",
             "Position": "pos",
             "Cellphone Energy": "cell_eng",
             "Balloon Energy": "balloon_eng",
+            "NONE": "none",
         }
+
         if selected in selection:
             self.set_graph_view(selection[selected])
 
     def set_graph_view(self, view_mode: str) -> None:
-        if view_mode not in {"all", "pos", "cell_eng", "balloon_eng"}:
+        """Change graph display, including hiding all graphs."""
+
+        valid_views = {
+            "all",
+            "pos",
+            "cell_eng",
+            "balloon_eng",
+            "none",
+        }
+
+        if view_mode not in valid_views:
             raise ValueError(f"Unknown graph view: {view_mode}")
+
         if view_mode == self.active_graph_view:
             return
+
         self.active_graph_view = view_mode
+
+        # Delete existing graphs and create the selected ones.
         self._setup_graphs()
-        self._replot_history()
+
+        # Restore history only when graphs are visible.
+        if view_mode != "none":
+            self._replot_history()
 
     def _sync_play_button(self) -> None:
         self.btn_pause.text = "⏸ PAUSE" if self.is_running else "▶ PLAY"
@@ -400,35 +713,61 @@ class VPythonRenderer:
         self._setup_graphs()
         self._replot_history()
 
-    def show_analytical_solution(self, _button: object) -> None:
-        if self.is_running:
-            self.is_running = False
-            self._sync_play_button()
+    def _setup_problem_statement_modal(self) -> None:
+        """Create the problem statement popup once."""
+
+        problem_file = (
+            BASE_DIR
+            / "solutions"
+            / "ballon_problem_enunciation.tex"
+        )
+
         try:
-            latex_source = ANALYTICAL_SOLUTION_FILE.read_text(encoding="utf-8")
-            self.cards.open_card(
-                title="Solução Analítica",
-                subtitle="Resolução matemática do problema",
-                content=latex_source,
+            content = problem_file.read_text(
+                encoding="utf-8"
+            )
+
+            self.cards.add_modal_launcher(
+                button_text="PROBLEM STATEMENT",
+                title="PROBLEM STATEMENT",
+                subtitle="Relative movement: Balloon!",
+                content=content,
                 latex=True,
-                width="640px",
+                width="860px",
+                label="Problem",
             )
+
         except (OSError, RuntimeError, ValueError) as exc:
-            self.cards.open_card(
-                title="Solução Analítica — erro",
-                content=f"Não foi possível mostrar a solução: {exc}",
+            self.cards.add_modal_launcher(
+                button_text="PROBLEM STATEMENT",
+                title="ERROR TO LOAD PROBLEM STATEMENT",
+                content=str(exc),
+                latex=False,
+                width="640px",
+                label="Problem",
             )
+
 
     # ---- Render and impact ---------------------------------------------
 
     def _update_visuals(self, snapshot: dict) -> None:
+        """Update object positions, velocity arrows and camera."""
+
         for name in ("cellphone", "balloon"):
             mesh = self.meshes[name]
+
             mesh.pos.y = snapshot[name]["abs_y"]
+
             self.velocity_arrows[name].pos = mesh.pos
+
             self.velocity_arrows[name].axis = vec(
-                0, snapshot[name]["rel_v"] * VELOCITY_ARROW_SCALE, 0
+                0,
+                snapshot[name]["rel_v"] * VELOCITY_ARROW_SCALE,
+                0,
             )
+
+        # Camera tracking happens after both objects move.
+        self._update_camera()
 
     def _set_cellphone_at_contact(self) -> None:
         self.meshes["cellphone"].pos.y = self.contact_y

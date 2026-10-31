@@ -1,5 +1,9 @@
 
-"""Reusable, validated numeric parameter controls for VPython applications."""
+"""Reusable, validated parameter controls for VPython applications.
+
+The presentation uses styled wtext sections and native VPython widgets.
+Parameter definitions and callbacks remain independent of the simulation.
+"""
 
 from __future__ import annotations
 
@@ -8,14 +12,14 @@ from html import escape
 from math import isclose, isfinite
 from typing import Callable, Optional
 
-from vpython import button, winput, wtext
+from vpython import button, color, winput, wtext
 
 Number = float | int
 
 
 @dataclass(frozen=True)
 class Parameter:
-    """Numeric parameter descriptor with optional bounds and grouping."""
+    """Define one numeric parameter, its constraints, and its UI group."""
 
     name: str
     label: str
@@ -29,92 +33,207 @@ class Parameter:
 
 
 class ParameterPanel:
-    """Display numeric inputs and pass validated values to one callback."""
+    """Display parameter inputs and apply validated values on demand."""
 
+   
     def __init__(
         self,
         title: str,
         parameters: list[Parameter],
         on_apply: Callable[[dict[str, Number]], None],
         pos: object | None = None,
+        extra_controls: Callable[[], None] | None = None,
     ) -> None:
         if not parameters:
             raise ValueError("At least one parameter is required.")
 
-        names = [p.name for p in parameters]
+        names = [param.name for param in parameters]
 
-        if len(names) != len(set(names)) or any(not name for name in names):
-            raise ValueError("Parameter names must be unique and nonempty.")
+        if len(names) != len(set(names)) or not all(names):
+            raise ValueError(
+                "Parameter names must be unique and non-empty."
+            )
 
-        self._pos_args = {"pos": pos} if pos is not None else {}
-        self.title = title
-        self.parameters = list(parameters)
-        self.on_apply = on_apply
-        self.inputs: dict[str, object] = {}
-        self.status: object
-
-        # Validate definitions before creating widgets.
-        for param in self.parameters:
+        for param in parameters:
             self._validate_definition(param)
             self._validate_value(param, param.value)
 
             if param.default is not None:
                 self._validate_value(param, param.default)
 
+        self._pos_args = {"pos": pos} if pos is not None else {}
+        self.title = title
+        self.parameters = list(parameters)
+        self.on_apply = on_apply
+        self.inputs: dict[str, object] = {}
+
+        # Compact panel header
+
         self._wtext(
-            text=f'<h3 style="margin:12px 0">{escape(title)}</h3>'
+            text=(
+                '<span style="display:inline-block;'
+                'box-sizing:border-box;'
+                'width:420px;margin:0 0 2px 12px;'
+                'padding:2px 0;'
+                'border-bottom:1px solid #cbd5e1;'
+                'font:700 14px Arial,sans-serif;'
+                'color:#0f172a">'
+                f'{escape(title)}'
+                '</span><br>'
+            )
         )
 
-        current_group: Optional[str] = None
+        current_group: str | None = None
 
         for param in self.parameters:
-            if param.group != current_group and param.group is not None:
+
+            # Section heading
+
+            if param.group != current_group:
                 current_group = param.group
 
-                self._wtext(
-                    text=(
-                        '<h4 style="margin:10px 0 4px">'
-                        f'{escape(current_group)}'
-                        '</h4>'
+                if current_group:
+                    self._wtext(
+                        text=(
+                            '<span style="'
+                            'display:inline-block;'
+                            'box-sizing:border-box;'
+                            'width:420px;'
+                            'margin:4px 0 2px 12px;'
+                            'padding:3px 8px;'
+                            'border-left:3px solid #0d9488;'
+                            'background:#eaf3f5;'
+                            'color:#115e59;'
+                            'font:700 11px Arial,sans-serif">'
+                            f'{escape(current_group.upper())}'
+                            '</span><br>'
+                        )
                     )
-                )
+
+            # Parameter label
 
             self._wtext(
-                text=f'{escape(param.label)}: &nbsp;'
+                text=(
+                    '<span style="'
+                    'display:inline-block;'
+                    'box-sizing:border-box;'
+                    'width:174px;'
+                    'margin-left:12px;'
+                    'vertical-align:middle;'
+                    'font:500 12px Arial,sans-serif;'
+                    'color:#334155">'
+                    f'{escape(param.label)}'
+                    '</span>'
+                )
             )
 
-            # VPython requires bind for every winput.
+            # Native numeric input
+
             self.inputs[param.name] = self._winput(
                 prompt="",
                 text=str(param.value),
                 type="numeric",
-                width=120,
+                width=106,
                 bind=self._handle_input_change,
             )
 
+            # Optional constraints
+
+            hint = self._hint(param)
+
+            if hint:
+                self._wtext(
+                    text=(
+                        '<span style="'
+                        'display:inline-block;'
+                        'margin-left:8px;'
+                        'font:10px Arial,sans-serif;'
+                        'color:#64748b">'
+                        f'{escape(hint)}'
+                        '</span>'
+                    )
+                )
+
             self._wtext(text="<br>")
 
-        self._wtext(text="<br>")
+        # Actions
+
+        self._wtext(
+            text=(
+                '<span style="'
+                'display:inline-block;'
+                'width:12px">'
+                '</span>'
+            )
+        )
+
+        if extra_controls is not None:
+            extra_controls()
 
         self._button(
-            text="APLICAR PARÂMETROS",
+            text="APPLY CHANGES",
             bind=self._handle_apply,
+            background=color.cyan,
         )
 
-        self._wtext(text=" &nbsp; ")
+        self._wtext(text="&nbsp;&nbsp;")
 
         self._button(
-            text="RESTAURAR PADRÕES",
+            text="RESET DEFAULTS",
             bind=self._handle_reset,
+            background=color.gray(0.85),
         )
 
         self._wtext(text="<br>")
+
+        # Feedback
 
         self.status = self._wtext(
-            text="Parâmetros prontos."
+            text=self._status(
+                "Ready — edit the values and click Apply Changes.",
+                "#475569",
+            )
         )
 
         self._wtext(text="<br>")
+
+    @staticmethod
+    def _status(message: str, accent: str) -> str:
+        return (
+            '<span style="'
+            'display:inline-block;'
+            'box-sizing:border-box;'
+            'max-width:420px;'
+            'margin:5px 0 0 12px;'
+            'padding:5px 8px;'
+            'background:#f1f5f9;'
+            f'border-left:3px solid {accent};'
+            'border-radius:4px;'
+            'font:11px/1.4 Arial,sans-serif;'
+            'color:#334155">'
+            f'{escape(message)}'
+            '</span>'
+        )
+
+    @staticmethod
+    def _hint(param: Parameter) -> str:
+        """Generate a short description of parameter constraints."""
+
+        hints: list[str] = []
+
+        if param.minimum is not None:
+            hints.append(f"Min: {param.minimum:g}")
+
+        if param.maximum is not None:
+            hints.append(f"Max: {param.maximum:g}")
+
+        if param.step is not None:
+            hints.append(f"Step: {param.step:g}")
+
+        if param.integer:
+            hints.append("Integer only")
+
+        return " · ".join(hints)
 
     def _wtext(self, **kwargs: object) -> object:
         return wtext(**kwargs, **self._pos_args)
@@ -124,6 +243,89 @@ class ParameterPanel:
 
     def _winput(self, **kwargs: object) -> object:
         return winput(**kwargs, **self._pos_args)
+
+    # ---------------------------------------------------------
+    # UI STYLING
+    # ---------------------------------------------------------
+
+    @staticmethod
+    def _header_html(title: str) -> str:
+        return (
+            '<div style="box-sizing:border-box;max-width:740px;'
+            'margin:16px 0 14px;padding:16px 18px;'
+            'border-radius:12px;border:1px solid #33465f;'
+            'background:#17263d;color:#f8fafc;'
+            'font-family:Arial,sans-serif">'
+            '<div style="font-size:19px;font-weight:700;line-height:1.3">'
+            f'&#9881;&nbsp; {escape(title)}</div>'
+            '<div style="margin-top:5px;font-size:12px;line-height:1.5;'
+            'color:#b9c8da">'
+            'Customize the simulation parameters below.'
+            '</div></div>'
+        )
+
+    @staticmethod
+    def _group_html(group: str) -> str:
+        return (
+            '<div style="box-sizing:border-box;max-width:740px;'
+            'margin:16px 0 10px;padding:9px 12px;'
+            'border-left:4px solid #0891b2;border-radius:5px;'
+            'background:#e8f4fa;color:#164e63;'
+            'font:700 13px/1.4 Arial,sans-serif;'
+            'letter-spacing:.6px;text-transform:uppercase">'
+            f'{escape(group)}</div>'
+        )
+
+    @staticmethod
+    def _label_html(label: str) -> str:
+        return (
+            '<span style="display:inline-block;min-width:230px;'
+            'padding:7px 12px 7px 3px;vertical-align:middle;'
+            'font:600 13px/1.4 Arial,sans-serif;'
+            'color:#334155">'
+            f'{escape(label)}</span>'
+        )
+
+    @staticmethod
+    def _hint_html(param: Parameter) -> str:
+        hints = []
+
+        if param.minimum is not None:
+            hints.append(f"Min: {param.minimum:g}")
+
+        if param.maximum is not None:
+            hints.append(f"Max: {param.maximum:g}")
+
+        if param.step is not None:
+            hints.append(f"Step: {param.step:g}")
+
+        if param.integer:
+            hints.append("Integer")
+
+        if not hints:
+            return ""
+
+        return (
+            '<span style="display:inline-block;margin-left:12px;'
+            'font:11px Arial,sans-serif;color:#64748b">'
+            f'{escape(" · ".join(hints))}</span>'
+        )
+
+    @staticmethod
+    def _status_html(message: str, accent: str) -> str:
+        return (
+            '<span style="display:inline-block;max-width:740px;'
+            'box-sizing:border-box;padding:9px 12px;'
+            'border-radius:7px;background:#f1f5f9;'
+            'border-left:3px solid '
+            f'{accent};color:#334155;'
+            'font:12px/1.5 Arial,sans-serif">'
+            f'{escape(message)}</span>'
+        )
+
+    # ---------------------------------------------------------
+    # VALIDATION
+    # ---------------------------------------------------------
 
     @staticmethod
     def _validate_definition(param: Parameter) -> None:
@@ -158,22 +360,22 @@ class ParameterPanel:
     ) -> None:
         if not isfinite(value):
             raise ValueError(
-                f"{param.label} deve ser um número finito."
+                f"{param.label} must be a finite number."
             )
 
         if param.minimum is not None and value < param.minimum:
             raise ValueError(
-                f"{param.label} deve ser >= {param.minimum}."
+                f"{param.label} must be at least {param.minimum:g}."
             )
 
         if param.maximum is not None and value > param.maximum:
             raise ValueError(
-                f"{param.label} deve ser <= {param.maximum}."
+                f"{param.label} must be at most {param.maximum:g}."
             )
 
         if param.integer and not float(value).is_integer():
             raise ValueError(
-                f"{param.label} deve ser inteiro."
+                f"{param.label} must be an integer."
             )
 
         if param.step is not None:
@@ -192,12 +394,16 @@ class ParameterPanel:
                 abs_tol=1e-9,
             ):
                 raise ValueError(
-                    f"{param.label} deve variar em "
-                    f"passos de {param.step}."
+                    f"{param.label} must use increments "
+                    f"of {param.step:g}."
                 )
 
+    # ---------------------------------------------------------
+    # PARAMETER MANAGEMENT
+    # ---------------------------------------------------------
+
     def get_values(self) -> dict[str, Number]:
-        """Read and validate every input field."""
+        """Read and validate all inputs."""
 
         result: dict[str, Number] = {}
 
@@ -208,7 +414,7 @@ class ParameterPanel:
                 value = float(raw)
             except (TypeError, ValueError) as exc:
                 raise ValueError(
-                    f"Número inválido para {param.label}."
+                    f"Enter a valid number for {param.label}."
                 ) from exc
 
             self._validate_value(param, value)
@@ -223,7 +429,7 @@ class ParameterPanel:
         self,
         values: dict[str, Number],
     ) -> None:
-        """Set input fields after validating their values."""
+        """Validate all values before updating any input."""
 
         by_name = {
             param.name: param
@@ -244,23 +450,22 @@ class ParameterPanel:
             self.inputs[name].text = str(value)
 
     def apply(self) -> bool:
-        """Apply validated parameters to the simulation."""
+        """Apply the validated configuration."""
 
         try:
             values = self.get_values()
             self.on_apply(values)
 
         except (ValueError, TypeError) as exc:
-            self.status.text = (
-                '<span style="color:#ef5350">Erro: '
-                f'{escape(str(exc))}</span>'
+            self.status.text = self._status_html(
+                f"Error: {exc}",
+                "#dc2626",
             )
             return False
 
-        self.status.text = (
-            '<span style="color:#81c784">'
-            'Parâmetros aplicados.'
-            '</span>'
+        self.status.text = self._status_html(
+            "Changes applied successfully.",
+            "#16a34a",
         )
 
         return True
@@ -269,38 +474,31 @@ class ParameterPanel:
         """Restore default values and apply them."""
 
         defaults = {
-            p.name: (
-                p.default
-                if p.default is not None
-                else p.value
+            param.name: (
+                param.default
+                if param.default is not None
+                else param.value
             )
-            for p in self.parameters
+            for param in self.parameters
         }
 
         self.set_values(defaults)
-
         return self.apply()
 
-    def _handle_input_change(
-        self,
-        _event: object,
-    ) -> None:
-        """Mark edits as pending without applying them."""
+    # ---------------------------------------------------------
+    # EVENT HANDLERS
+    # ---------------------------------------------------------
 
+    def _handle_input_change(self, _event: object) -> None:
         if hasattr(self, "status"):
-            self.status.text = (
-                "Alterações pendentes. "
-                "Clique em APLICAR PARÂMETROS."
+            self.status.text = self._status_html(
+                "Unsaved changes. Click Apply Changes "
+                "to update the simulation.",
+                "#d97706",
             )
 
-    def _handle_apply(
-        self,
-        _event: object,
-    ) -> None:
+    def _handle_apply(self, _event: object) -> None:
         self.apply()
 
-    def _handle_reset(
-        self,
-        _event: object,
-    ) -> None:
+    def _handle_reset(self, _event: object) -> None:
         self.reset()
