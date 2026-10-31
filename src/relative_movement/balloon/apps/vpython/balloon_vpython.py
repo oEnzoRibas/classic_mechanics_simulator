@@ -26,7 +26,7 @@ from vpython import (
 
 from common.vpython.cards import CardCenter
 from common.vpython.parameter_panel import Parameter, ParameterPanel
-from relative_movement.physics_core import GRAVITY, PointMass, SimulationEngine
+from relative_movement.rm_physics_core import GRAVITY, PointMass, SimulationEngine
 
 BASE_DIR = Path(__file__).resolve().parent
 ANALYTICAL_SOLUTION_FILE = (
