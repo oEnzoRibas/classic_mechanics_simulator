@@ -32,7 +32,6 @@ class DifferentialEquation:
         """Evaluate the derivative f(t, y)."""
         return self.derivative(t, state)
             
-
 class ODESolver:
     """
     Base class for numerical ODE solvers.
@@ -112,7 +111,6 @@ class EulerSolver(ODESolver):
             y=next_y,
         )
 
-
 class RK4Solver(ODESolver):
     """Numerical solver based on the classical fourth-order Runge-Kutta method."""
 
@@ -168,7 +166,6 @@ class RK4Solver(ODESolver):
             t=t + step_size,
             y=next_y,
         )
-
 
 class SimulationEngine:
     """

@@ -18,11 +18,9 @@ src/differential_equations/apps/pendulum/pendulum_app.py
 src/differential_equations/apps/pendulum/pendulum_physics_core.py
 src/differential_equations/apps/pendulum/renderers/pendulum_matplotlib_renderer.py
 src/relative_movement/__init__.py
-src/relative_movement/physics_core.py
+src/relative_movement/rm_physics_core.py
 src/relative_movement/balloon/__init__.py
-src/relative_movement/balloon/physics_core.py
 src/relative_movement/balloon/apps/manim/manim-app.py
-src/relative_movement/balloon/apps/vpython/vpython.app.py
+src/relative_movement/balloon/apps/vpython/balloon_vpython.py
 src/relative_movement/balloon/apps/vpython/solutions/ballon_problem_enunciation.tex
-src/relative_movement/balloon/deprecated/deprecated-balloon_cellphone_drop.py
 src/relative_movement/train/ericvicentt_MovimentoRelativo_trem.py
